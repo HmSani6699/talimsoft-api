@@ -1,0 +1,632 @@
+{
+  "info": {
+    "name": "School Management System API",
+    "_postman_id": "school-mgmt-api-collection",
+    "description": "Complete API collection for School Management System with 19 modules",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "class_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "section_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "subject_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "student_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "parent_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "exam_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fee_setup_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "account_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "book_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Class Management",
+      "item": [
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grade 10\",\n  \"description\": \"Tenth grade class\",\n  \"capacity\": 40\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes"]
+            }
+          }
+        },
+        {
+          "name": "Get All Classes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Class",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/classes/{{class_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes", "{{class_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Class",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/classes/{{class_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes", "{{class_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Class",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/classes/{{class_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["classes", "{{class_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Section Management",
+      "item": [
+        {
+          "name": "Create Section",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Section A\",\n  \"class_id\": \"{{class_id}}\",\n  \"capacity\": 35,\n  \"room_number\": \"101\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sections",
+              "host": ["{{baseUrl}}"],
+              "path": ["sections"]
+            }
+          }
+        },
+        {
+          "name": "Get All Sections",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sections?class_id={{class_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sections"],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{class_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Subject Management",
+      "item": [
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics\",\n  \"code\": \"MATH101\",\n  \"class_id\": \"{{class_id}}\",\n  \"type\": \"theory\",\n  \"credits\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subjects",
+              "host": ["{{baseUrl}}"],
+              "path": ["subjects"]
+            }
+          }
+        },
+        {
+          "name": "Get All Subjects",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/subjects",
+              "host": ["{{baseUrl}}"],
+              "path": ["subjects"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Parent Management",
+      "item": [
+        {
+          "name": "Create Parent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"contact\": \"+1234567890\",\n  \"email\": \"parent@example.com\",\n  \"address\": \"123 Main Street\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/parents",
+              "host": ["{{baseUrl}}"],
+              "path": ["parents"]
+            }
+          }
+        },
+        {
+          "name": "Get All Parents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/parents",
+              "host": ["{{baseUrl}}"],
+              "path": ["parents"]
+            }
+          }
+        },
+        {
+          "name": "Get Parent's Children",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/parents/{{parent_id}}/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["parents", "{{parent_id}}", "students"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Student Management",
+      "item": [
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Alice\",\n  \"lastName\": \"Johnson\",\n  \"roll_number\": \"2024001\",\n  \"class_id\": \"{{class_id}}\",\n  \"section_id\": \"{{section_id}}\",\n  \"guardian_id\": \"{{parent_id}}\",\n  \"dateOfBirth\": \"2010-01-01\",\n  \"gender\": \"Female\",\n  \"bloodGroup\": \"O+\",\n  \"admissionDate\": \"2024-01-01\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"]
+            }
+          }
+        },
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"]
+            }
+          }
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students/{{student_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{student_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Staff Management",
+      "item": [
+        {
+          "name": "Create Staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"role\": \"Teacher\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+9876543210\",\n  \"password\": \"password123\",\n  \"joinDate\": \"2023-01-01\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff"]
+            }
+          }
+        },
+        {
+          "name": "Get All Staff",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Attendance Management",
+      "item": [
+        {
+          "name": "Mark Student Attendance (Bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_id\": \"{{class_id}}\",\n  \"section_id\": \"{{section_id}}\",\n  \"date\": \"2024-02-14\",\n  \"records\": [\n    { \"student_id\": \"{{student_id}}\", \"status\": \"Present\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/student/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "student", "bulk"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Routine & Homework",
+      "item": [
+        {
+          "name": "Create Routine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day\": \"Monday\",\n  \"class_id\": \"{{class_id}}\",\n  \"section_id\": \"{{section_id}}\",\n  \"periods\": [\n    { \"startTime\": \"09:00\", \"endTime\": \"10:00\", \"subject_id\": \"{{subject_id}}\", \"teacher_id\": \"{{staff_id}}\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/class-routines",
+              "host": ["{{baseUrl}}"],
+              "path": ["class-routines"]
+            }
+          }
+        },
+        {
+            "name": "Create Homework",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n \"class_id\": \"{{class_id}}\",\n \"section_id\": \"{{section_id}}\",\n \"subject_id\": \"{{subject_id}}\",\n \"title\": \"Math Problems\",\n \"description\": \"Solve chapter 5\",\n \"dueDate\": \"2024-02-20\"\n}"
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/homework",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["homework"]
+                }
+            }
+        }
+      ]
+    },
+    {
+        "name": "9. Exam & Grades",
+        "item": [
+            {
+                "name": "Create Exam",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"exam_name_id\": \"MIDTERM\",\n \"class_id\": \"{{class_id}}\",\n \"start_date\": \"2024-06-01\",\n \"end_date\": \"2024-06-15\"\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/exams",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["exams"]
+                    }
+                }
+            },
+            {
+                "name": "Add Grade Range",
+                "request": {
+                     "method": "POST",
+                     "header": [{ "key": "Content-Type", "value": "application/json" }],
+                     "body": {
+                         "mode": "raw",
+                         "raw": "{\n \"name\": \"A+\",\n \"min_marks\": 80,\n \"max_marks\": 100,\n \"grade_point\": 5.0\n}"
+                     },
+                     "url": {
+                         "raw": "{{baseUrl}}/grades",
+                         "host": ["{{baseUrl}}"],
+                         "path": ["grades"]
+                     }
+                }
+            }
+        ]
+    },
+    {
+      "name": "10. Finance (Fees)",
+      "item": [
+        {
+          "name": "Create Fee Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Tuition\",\n  \"amount\": 1500,\n  \"class_id\": \"{{class_id}}\",\n  \"type\": \"Monthly\",\n  \"frequency\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/fee-setups",
+              "host": ["{{baseUrl}}"],
+              "path": ["fee-setups"]
+            }
+          }
+        },
+        {
+            "name": "Create Student Fee Record",
+            "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                    "mode": "raw",
+                     "raw": "{\n \"student_id\": \"{{student_id}}\",\n \"fee_setup_id\": \"{{fee_setup_id}}\",\n \"amount\": 1500,\n \"year\": \"2024\",\n \"month\": \"January\"\n}"
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/fees",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["fees"]
+                }
+            }
+        }
+      ]
+    },
+    {
+        "name": "11. Accounting & Transactions",
+        "item": [
+            {
+                "name": "Create Account",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"name\": \"Main Cash\",\n \"type\": \"Cash\",\n \"balance\": 50000\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/accounts",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["accounts"]
+                    }
+                }
+            },
+            {
+                "name": "Record Transaction (Expense)",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"type\": \"Expense\",\n \"category\": \"Utility\",\n \"account_id\": \"{{account_id}}\",\n \"amount\": 500,\n \"description\": \"Electric Bill\"\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/transactions",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["transactions"]
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "name": "12. Library Management",
+        "item": [
+            {
+                "name": "Add Book",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"title\": \"Physics Part 1\",\n \"author\": \"H.C. Verma\",\n \"quantity\": 10,\n \"category\": \"Science\"\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/books",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["books"]
+                    }
+                }
+            },
+            {
+                "name": "Issue Book",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"book_id\": \"{{book_id}}\",\n \"user_type\": \"Student\",\n \"student_id\": \"{{student_id}}\",\n \"due_date\": \"2024-03-01\"\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/book-issues/issue",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["book-issues", "issue"]
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "name": "13. Certificates & IDs",
+        "item": [
+            {
+                "name": "Get ID Card Data (Students)",
+                "request": {
+                    "method": "GET",
+                    "url": {
+                         "raw": "{{baseUrl}}/cards/students?class_id={{class_id}}",
+                         "host": ["{{baseUrl}}"],
+                         "path": ["cards", "students"],
+                         "query": [{ "key": "class_id", "value": "{{class_id}}" }]
+                    }
+                }
+            },
+            {
+                "name": "Issue Certificate",
+                "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n \"type\": \"Testimonial\",\n \"student_id\": \"{{student_id}}\",\n \"remarks\": \"Excellent conduct\"\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/certificates",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["certificates"]
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "name": "14. Academic Reports",
+        "item": [
+            {
+                 "name": "Get Student Report Card",
+                 "request": {
+                     "method": "GET",
+                     "url": {
+                         "raw": "{{baseUrl}}/academic-reports/student/{{student_id}}",
+                         "host": ["{{baseUrl}}"],
+                         "path": ["academic-reports", "student", "{{student_id}}"]
+                     }
+                 }
+            }
+        ]
+    }
+  ]
+}
