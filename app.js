@@ -21,8 +21,11 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
+
+      // If wildcard is present, allow all origins
+      if (allowedOrigins.includes('*')) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         console.error(`CORS Blocked for origin: ${origin}`);
