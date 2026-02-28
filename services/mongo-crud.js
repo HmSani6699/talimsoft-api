@@ -30,10 +30,10 @@ module.exports = {
         .sort(sorting)
         .project(keys)
         .toArray();
-      return list;
+      return Array.isArray(list) ? list : [];
     } catch (e) {
       console.error(e);
-      return false;
+      return [];
     }
   },
   async fetchOne(db, collection, query = {}, keys = {}, sorting = {}) {
@@ -47,7 +47,7 @@ module.exports = {
         .limit(1)
         .project(keys)
         .toArray();
-      return list.length > 0 ? list[0] : false;
+      return list && list.length > 0 ? list[0] : false;
     } catch (e) {
       console.error(e);
       return false;
@@ -64,10 +64,10 @@ module.exports = {
         .limit(limit)
         .project(keys)
         .toArray();
-      return list;
+      return Array.isArray(list) ? list : [];
     } catch (e) {
       console.error(e);
-      return false;
+      return [];
     }
   },
   async fetchUniqueValues(db, collection, field, query) {
@@ -96,7 +96,9 @@ module.exports = {
     try {
       const response = await db.collection(collection)
         .insertOne(payload);
-      return response.ops[0];
+      // v4+ returns insertedId, and we need to return the inserted document or at least true/success
+      // For compatibility with codebase that expects response.ops[0]:
+      return { ...payload, _id: response.insertedId };
     } catch (e) {
       console.error(e);
       return false;
@@ -112,9 +114,9 @@ module.exports = {
       if (query._id && typeof query._id === 'string') {
         query._id = new ObjectId(query._id);
       }
-      await db.collection(collection)
+      const result = await db.collection(collection)
         .updateOne(query, updateDoc, options);
-      return true;
+      return result.matchedCount > 0 || result.upsertedCount > 0;
     } catch (e) {
       console.error(e);
       return false;
@@ -126,9 +128,9 @@ module.exports = {
       if (query._id && typeof query._id === 'string') {
         query._id = new ObjectId(query._id);
       }
-      await db.collection(collection)
+      const result = await db.collection(collection)
         .updateOne(query, { $push: payload }, options);
-      return true;
+      return result.matchedCount > 0;
     } catch (e) {
       console.error(e);
       return false;
@@ -138,7 +140,7 @@ module.exports = {
     try {
       const response = await db.collection(collection)
         .insertMany(payload);
-      return response.ops;
+      return response.insertedIds;
     } catch (e) {
       console.error(e);
       return false;
@@ -151,7 +153,8 @@ module.exports = {
       }
       let result = await db.collection(collection)
         .updateOne(query, newValue);
-      return !!result.result.n; // for returning boolean value of if updated or not
+      // v4+ uses matchedCount instead of result.n
+      return result.matchedCount > 0; 
     } catch (e) {
       console.error(e);
       return false;
@@ -163,9 +166,9 @@ module.exports = {
         query._id = new ObjectId(query._id);
       }
       let result = await db.collection(collection)
-        .findOneAndDelete(query);
-
-      return !!result.lastErrorObject.n; // for returning boolean value of if deleted or not
+        .deleteOne(query); // Switched from findOneAndDelete to deleteOne for consistency with boolean return
+      
+      return result.deletedCount > 0;
     } catch (e) {
       console.error(e);
       return false;
@@ -175,8 +178,7 @@ module.exports = {
     try {
       let result =
         (await db.collection(collection)
-          .find(query)
-          .count()) > 0;
+          .countDocuments(query)) > 0;
       return result;
     } catch (e) {
       console.error(e);

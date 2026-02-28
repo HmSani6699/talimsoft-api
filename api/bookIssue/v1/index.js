@@ -27,7 +27,7 @@ const returnSchema = Joi.object({
 const getAllIssues = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.user_type) query.user_type = req.query.user_type;
     if (req.query.student_id) query.student_id = req.query.student_id;
     if (req.query.status) query.status = req.query.status; // Issued, Returned
@@ -42,7 +42,7 @@ const getAllIssues = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -51,9 +51,10 @@ const issueBook = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const { book_id } = req.body;
+    const madrasaId = req.user.madrasa_id;
     
     // Check availability
-    const book = await mongo.fetchOne(db, "books", { _id: book_id });
+    const book = await mongo.fetchOne(db, "books", { _id: book_id, madrasa_id: madrasaId });
     if (!book) return res.status(404).json({ success: false, message: "Book not found" });
     
     if (book.available_qty <= 0) {
@@ -62,6 +63,7 @@ const issueBook = async (req, res) => {
 
     const issueData = {
       ...req.body,
+      madrasa_id: madrasaId,
       status: "Issued",
       created_at: Date.now(),
       updated_at: Date.now()
@@ -70,14 +72,14 @@ const issueBook = async (req, res) => {
     const issue = await mongo.insertOne(db, "book_issues", issueData);
     
     // Decrease qty
-    await db.collection("books").updateOne({ _id: new ObjectId(book_id) }, { $inc: { available_qty: -1 } });
+    await db.collection("books").updateOne({ _id: new ObjectId(book_id), madrasa_id: madrasaId }, { $inc: { available_qty: -1 } });
     
     res.status(201).json({ success: true, data: issue });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -86,14 +88,15 @@ const returnBook = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const issueId = req.params.id;
-    const issue = await mongo.fetchOne(db, "book_issues", { _id: issueId });
+    const madrasaId = req.user.madrasa_id;
+    const issue = await mongo.fetchOne(db, "book_issues", { _id: issueId, madrasa_id: madrasaId });
     
     if (!issue) return res.status(404).json({ success: false, message: "Issue record not found" });
     if (issue.status === "Returned") return res.status(400).json({ success: false, message: "Book already returned" });
 
     // Mark as returned
     await db.collection("book_issues").updateOne(
-        { _id: new ObjectId(issueId) },
+        { _id: new ObjectId(issueId), madrasa_id: madrasaId },
         { 
             $set: { 
                 status: "Returned", 
@@ -104,14 +107,14 @@ const returnBook = async (req, res) => {
     );
 
     // Increase qty
-    await db.collection("books").updateOne({ _id: new ObjectId(issue.book_id) }, { $inc: { available_qty: 1 } });
+    await db.collection("books").updateOne({ _id: new ObjectId(issue.book_id), madrasa_id: madrasaId }, { $inc: { available_qty: 1 } });
     
     res.status(200).json({ success: true, message: "Book returned successfully" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

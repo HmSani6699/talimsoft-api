@@ -60,9 +60,160 @@
       "key": "book_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "designation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "salary_setup_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "salary_payment_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
+    {
+      "name": "0. Authentication & Setup",
+      "item": [
+        {
+          "name": "Initial Super Admin Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@mms.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/auth/v1/setup/create-super-admin",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "auth", "v1", "setup", "create-super-admin"]
+            }
+          }
+        },
+        {
+          "name": "User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@mms.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/auth/v1/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "auth", "v1", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/auth/v1/refresh-token",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "auth", "v1", "refresh-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "0.1 Super Admin (Madrasa Management)",
+      "item": [
+        {
+          "name": "Create Madrasa & Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"madrasaName\": \"Madrasa Al-Hikmah\",\n  \"address\": \"Dhaka, Bangladesh\",\n  \"adminName\": \"Principal Ahmed\",\n  \"adminEmail\": \"admin@hikmah.com\",\n  \"adminPassword\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/super-admin/v1/madrasas",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "super-admin", "v1", "madrasas"]
+            }
+          }
+        },
+        {
+          "name": "Get All Madrasas",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/super-admin/v1/madrasas",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "super-admin", "v1", "madrasas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "0.2 Admission Transaction (Parent + Students)",
+      "item": [
+        {
+          "name": "Process Admission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicYear\": \"2025\",\n  \"admissionDate\": \"2025-01-01\",\n  \"guardian\": {\n    \"fatherName\": \"Michael Smith\",\n    \"motherName\": \"Sarah Smith\",\n    \"contact\": \"01712345678\",\n    \"address\": \"Dhaka\"\n  },\n  \"students\": [\n    {\n      \"firstName\": \"Alice\",\n      \"gender\": \"Female\",\n      \"dateOfBirth\": \"2015-05-15\",\n      \"class\": \"Class 1\",\n      \"password\": \"student123\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission",
+              "host": ["{{baseUrl}}"],
+              "path": ["admission"]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "1. Class Management",
       "item": [
@@ -282,6 +433,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
@@ -327,14 +482,12 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"John Smith\",\n  \"role\": \"Teacher\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+9876543210\",\n  \"password\": \"password123\",\n  \"joinDate\": \"2023-01-01\",\n  \"status\": \"Active\"\n}"
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"role\": \"Teacher\",\n  \"department\": \"Science\",\n  \"designation\": \"Assistant Teacher\",\n  \"joinDate\": \"2023-01-01\",\n  \"phone\": \"+9876543210\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"address\": \"DHAKA\",\n  \"paymentMethod\": \"None\",\n  \"gender\": \"Male\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/staff",
@@ -347,10 +500,60 @@
           "name": "Get All Staff",
           "request": {
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
             "url": {
               "raw": "{{baseUrl}}/staff",
               "host": ["{{baseUrl}}"],
               "path": ["staff"]
+            }
+          }
+        },
+        {
+          "name": "Get Staff by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staff_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", "{{staff_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Staff",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith (Updated)\",\n  \"role\": \"Teacher\",\n  \"phone\": \"+9876543211\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staff_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", "{{staff_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Staff",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staff_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", "{{staff_id}}"]
             }
           }
         }
@@ -627,6 +830,214 @@
                  }
             }
         ]
+    },
+    {
+      "name": "15. Designation Management",
+      "item": [
+        {
+          "name": "Get All Designations",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations"]
+            }
+          }
+        },
+        {
+          "name": "Create Designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Teacher\",\n  \"level\": \"Senior\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/designations",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations"]
+            }
+          }
+        },
+        {
+          "name": "Update Designation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Lecturer\",\n  \"level\": \"Senior\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designation_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designation_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Designation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designation_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designation_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Salary Setup Management",
+      "item": [
+        {
+          "name": "Get All Salary Setups",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary-setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-setup"]
+            }
+          }
+        },
+        {
+          "name": "Create Salary Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staff_id\": \"{{staff_id}}\",\n  \"basic_salary\": 30000,\n  \"house_rent\": 5000,\n  \"medical_allowance\": 2000,\n  \"effective_from\": \"2025-01-01\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary-setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-setup"]
+            }
+          }
+        },
+        {
+          "name": "Update Salary Setup",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"basic_salary\": 32000,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary-setup/{{salary_setup_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-setup", "{{salary_setup_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Salary Setup",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary-setup/{{salary_setup_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-setup", "{{salary_setup_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. Salary Payment Management",
+      "item": [
+        {
+          "name": "Get All Salary Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary-payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-payment"]
+            }
+          }
+        },
+        {
+          "name": "Record Salary Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staff_id\": \"{{staff_id}}\",\n  \"month\": 1,\n  \"year\": 2025,\n  \"gross_salary\": 37000,\n  \"deductions\": 0,\n  \"payment_method\": \"Cash\",\n  \"status\": \"paid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary-payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-payment"]
+            }
+          }
+        },
+        {
+          "name": "Get Staff Payment History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary-payment/staff/{{staff_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-payment", "staff", "{{staff_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Salary Payment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary-payment/{{salary_payment_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary-payment", "{{salary_payment_id}}"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

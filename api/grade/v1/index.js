@@ -21,18 +21,17 @@ const createGrade = async (req, res) => {
   try {
     const { min_marks, max_marks, name } = req.body;
     
-    // Check for duplicate name
-    const existingName = await mongo.fetchOne(db, "grades", { name });
+    // Check for duplicate name in same madrasa
+    const existingName = await mongo.fetchOne(db, "grades", { name, madrasa_id: req.user.madrasa_id });
     if (existingName) {
         return res.status(409).json({ success: false, message: `Grade ${name} already exists` });
     }
 
-    // Check for overlap
-    // Overlap exists if NOT (newMax < existingMin OR newMin > existingMax)
-    // Which means: newMax >= existingMin AND newMin <= existingMax
+    // Check for overlap in same madrasa
     const overlap = await db.collection("grades").findOne({
+        madrasa_id: req.user.madrasa_id,
         $or: [
-            { min_marks: { $lte: max_marks }, max_marks: { $gte: min_marks } } // Simplifies to finding any range intersecting [min, max]
+            { min_marks: { $lte: max_marks }, max_marks: { $gte: min_marks } }
         ]
     });
 
@@ -45,6 +44,7 @@ const createGrade = async (req, res) => {
 
     const gradeData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -55,7 +55,7 @@ const createGrade = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -74,6 +74,7 @@ const updateGrade = async (req, res) => {
     if (min_marks !== undefined && max_marks !== undefined) {
         const overlap = await db.collection("grades").findOne({
             _id: { $ne: new ObjectId(id) },
+            madrasa_id: req.user.madrasa_id,
             $or: [
                 { min_marks: { $lte: max_marks }, max_marks: { $gte: min_marks } }
             ]
@@ -90,7 +91,7 @@ const updateGrade = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "grades",
-      { _id: id },
+      { _id: id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -108,7 +109,7 @@ const updateGrade = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -117,14 +118,15 @@ const updateGrade = async (req, res) => {
 const getAllGrades = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-      const grades = await mongo.fetchMany(db, "grades", {}, {}, { min_marks: -1 });
-      const total = await mongo.documentCount(db, "grades");
+      const query = { madrasa_id: req.user.madrasa_id };
+      const grades = await mongo.fetchMany(db, "grades", query, {}, { min_marks: -1 });
+      const total = await mongo.documentCount(db, "grades", query);
       res.status(200).json({ success: true, data: grades, total });
     } catch (error) {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
   };
   
@@ -132,7 +134,7 @@ const getAllGrades = async (req, res) => {
   const getGradeById = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-      const grade = await mongo.fetchOne(db, "grades", { _id: req.params.id });
+      const grade = await mongo.fetchOne(db, "grades", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
       if (!grade) {
         return res.status(404).json({ success: false, message: "Grade not found" });
       }
@@ -141,7 +143,7 @@ const getAllGrades = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
   };
 
@@ -153,6 +155,7 @@ const getAllGrades = async (req, res) => {
       
       // Efficient query
       const grade = await db.collection("grades").findOne({
+          madrasa_id: req.user.madrasa_id,
           min_marks: { $lte: marks },
           max_marks: { $gte: marks }
       });
@@ -166,7 +169,7 @@ const getAllGrades = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
   };
 
@@ -174,7 +177,7 @@ const getAllGrades = async (req, res) => {
   const deleteGrade = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-      const result = await mongo.deleteData(db, "grades", { _id: req.params.id });
+      const result = await mongo.deleteData(db, "grades", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
       
       if (!result) {
         return res.status(404).json({ success: false, message: "Grade not found" });
@@ -185,7 +188,7 @@ const getAllGrades = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
   };
 

@@ -23,7 +23,7 @@ const transactionSchema = Joi.object({
 const getAllTransactions = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.account_id) query.account_id = req.query.account_id;
     if (req.query.type) query.type = req.query.type;
     if (req.query.category) query.category = req.query.category;
@@ -45,7 +45,7 @@ const getAllTransactions = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -53,14 +53,15 @@ const getAllTransactions = async (req, res) => {
 const getTransactionById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const transaction = await mongo.fetchOne(db, "transactions", { _id: req.params.id });
+    const madrasaId = req.user.madrasa_id;
+    const transaction = await mongo.fetchOne(db, "transactions", { _id: req.params.id, madrasa_id: madrasaId });
     if (!transaction) {
       return res.status(404).json({ success: false, message: "Transaction not found" });
     }
     
     // Populate account info
     if (transaction.account_id) {
-        const acc = await mongo.fetchOne(db, "accounts", { _id: transaction.account_id });
+        const acc = await mongo.fetchOne(db, "accounts", { _id: transaction.account_id, madrasa_id: madrasaId });
         transaction.account = acc;
     }
     
@@ -69,7 +70,7 @@ const getTransactionById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -78,9 +79,10 @@ const createTransaction = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const { type, account_id, amount, transfer_to_account_id } = req.body;
+    const madrasaId = req.user.madrasa_id;
     
     // Validate accounts exist
-    const account = await mongo.fetchOne(db, "accounts", { _id: account_id });
+    const account = await mongo.fetchOne(db, "accounts", { _id: account_id, madrasa_id: madrasaId });
     if (!account) return res.status(404).json({ success: false, message: "Source account not found" });
 
     // Validate balance for Expense/Transfer
@@ -90,13 +92,14 @@ const createTransaction = async (req, res) => {
 
     if (type === "Transfer") {
         if (!transfer_to_account_id) return res.status(400).json({ success: false, message: "Destination account required for Transfer" });
-        const destAccount = await mongo.fetchOne(db, "accounts", { _id: transfer_to_account_id });
+        const destAccount = await mongo.fetchOne(db, "accounts", { _id: transfer_to_account_id, madrasa_id: madrasaId });
         if (!destAccount) return res.status(404).json({ success: false, message: "Destination account not found" });
     }
 
     // Prepare transaction record
     const transactionData = {
       ...req.body,
+      madrasa_id: madrasaId,
       date: new Date(req.body.date || Date.now()),
       created_at: Date.now(),
       updated_at: Date.now()
@@ -109,12 +112,12 @@ const createTransaction = async (req, res) => {
     // Here we do sequential updates.
     
     if (type === "Income") {
-        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id) }, { $inc: { balance: amount } });
+        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id), madrasa_id: madrasaId }, { $inc: { balance: amount } });
     } else if (type === "Expense") {
-        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id) }, { $inc: { balance: -amount } });
+        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id), madrasa_id: madrasaId }, { $inc: { balance: -amount } });
     } else if (type === "Transfer") {
-        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id) }, { $inc: { balance: -amount } });
-        await db.collection("accounts").updateOne({ _id: new ObjectId(transfer_to_account_id) }, { $inc: { balance: amount } });
+        await db.collection("accounts").updateOne({ _id: new ObjectId(account_id), madrasa_id: madrasaId }, { $inc: { balance: -amount } });
+        await db.collection("accounts").updateOne({ _id: new ObjectId(transfer_to_account_id), madrasa_id: madrasaId }, { $inc: { balance: amount } });
     }
 
     res.status(201).json({ success: true, data: transaction, message: "Transaction recorded and balance updated" });
@@ -122,7 +125,7 @@ const createTransaction = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

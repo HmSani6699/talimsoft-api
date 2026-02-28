@@ -23,7 +23,7 @@ const scheduleSchema = Joi.object({
 const getAllSchedules = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.exam_id) query.exam_id = req.query.exam_id;
     if (req.query.class_id) query.class_id = req.query.class_id;
     if (req.query.subject_id) query.subject_id = req.query.subject_id;
@@ -35,7 +35,7 @@ const getAllSchedules = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -43,7 +43,7 @@ const getAllSchedules = async (req, res) => {
 const getScheduleById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const schedule = await mongo.fetchOne(db, "exam_schedules", { _id: req.params.id });
+    const schedule = await mongo.fetchOne(db, "exam_schedules", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!schedule) {
       return res.status(404).json({ success: false, message: "Schedule not found" });
     }
@@ -52,7 +52,7 @@ const getScheduleById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -60,10 +60,11 @@ const getScheduleById = async (req, res) => {
 const createSchedule = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    // Check duplication (same exam, same subject)
+    // Check duplication (same exam, same subject, same madrasa)
     const existing = await mongo.fetchOne(db, "exam_schedules", { 
         exam_id: req.body.exam_id, 
-        subject_id: req.body.subject_id 
+        subject_id: req.body.subject_id,
+        madrasa_id: req.user.madrasa_id
     });
     
     if (existing) {
@@ -72,6 +73,7 @@ const createSchedule = async (req, res) => {
 
     const scheduleData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -82,7 +84,7 @@ const createSchedule = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -93,7 +95,7 @@ const updateSchedule = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "exam_schedules",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -111,7 +113,7 @@ const updateSchedule = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -119,7 +121,7 @@ const updateSchedule = async (req, res) => {
 const deleteSchedule = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "exam_schedules", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "exam_schedules", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Schedule not found" });
@@ -130,7 +132,7 @@ const deleteSchedule = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

@@ -24,7 +24,7 @@ const reportSchema = Joi.object({
 const getAllReports = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.student_id) query.student_id = req.query.student_id;
     if (req.query.exam_id) query.exam_id = req.query.exam_id;
     if (req.query.subject_id) query.subject_id = req.query.subject_id;
@@ -40,7 +40,7 @@ const getAllReports = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -48,7 +48,7 @@ const getAllReports = async (req, res) => {
 const getReportById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const report = await mongo.fetchOne(db, "academic_reports", { _id: req.params.id });
+    const report = await mongo.fetchOne(db, "academic_reports", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!report) {
       return res.status(404).json({ success: false, message: "Report not found" });
     }
@@ -57,7 +57,7 @@ const getReportById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -66,7 +66,8 @@ const getStudentReportCard = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const query = {
-      student_id: req.params.studentId
+      student_id: req.params.studentId,
+      madrasa_id: req.user.madrasa_id
     };
     
     if (req.query.exam_id) query.exam_id = req.query.exam_id;
@@ -77,7 +78,7 @@ const getStudentReportCard = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -87,6 +88,7 @@ const createReport = async (req, res) => {
   try {
     const reportData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -97,7 +99,7 @@ const createReport = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -108,7 +110,7 @@ const updateReport = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "academic_reports",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -126,7 +128,7 @@ const updateReport = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -134,7 +136,7 @@ const updateReport = async (req, res) => {
 const deleteReport = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "academic_reports", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "academic_reports", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Report not found" });
@@ -145,7 +147,7 @@ const deleteReport = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

@@ -9,24 +9,37 @@ const mongoConnect = require(`${root}/services/mongo-connect`);
 // Joi Schema for Class
 const classSchema = Joi.object({
   name: Joi.string().required(),
+  level: Joi.string().allow("Primary", "Secondary", "Higher Secondary"),
+  section_id: Joi.string().allow(null, ""),
+  students: Joi.number().allow(0),
+  subjects: Joi.number().allow(0),
   tuitionFee: Joi.number().allow(null, 0),
   classTeacher_id: Joi.string().allow(null, ""), // ObjectId as string
-  status: Joi.string().default("Active"),
-  description: Joi.string().allow("")
+  status: Joi.string().valid("active", "inactive").default("active"),
+  description: Joi.string().allow(""),
+  subjects_list: Joi.array().items(Joi.string()).allow(null),
 });
 
 // Get all classes
 const getAllClasses = async (req, res) => {
-  const { db, client } = await mongoConnect();
+  const { db } = await mongoConnect();
   try {
-    const classes = await mongo.fetchMany(db, "classes", {}, {}, { name: 1 });
-    const total = await mongo.documentCount(db, "classes");
-    res.status(200).json({ success: true, data: classes, total });
+    const madrasaId = req.user.madrasa_id || null;
+    const query = { madrasa_id: madrasaId };
+    
+    const classes = await mongo.fetchMany(db, "classes", query, {}, { name: 1 });
+    const total = await mongo.documentCount(db, "classes", query);
+    
+    res.status(200).json({ 
+      success: true, 
+      data: Array.isArray(classes) ? classes : [], 
+      total: total || 0 
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // Connection managed by singleton
   }
 };
 
@@ -35,13 +48,14 @@ const getClassById = async (req, res) => {
   console.log(`[GET] /classes/${req.params.id} hit`);
   const { db, client } = await mongoConnect();
   try {
-    const classData = await mongo.fetchOne(db, "classes", { _id: req.params.id });
+    const query = { _id: req.params.id, madrasa_id: req.user.madrasa_id };
+    const classData = await mongo.fetchOne(db, "classes", query);
     if (!classData) {
       return res.status(404).json({ success: false, message: "Class not found" });
     }
     
     // Get sections for this class
-    const sections = await mongo.fetchMany(db, "sections", { class_id: req.params.id });
+    const sections = await mongo.fetchMany(db, "sections", { class_id: req.params.id, madrasa_id: req.user.madrasa_id });
     classData.sections = sections;
     
     res.status(200).json({ success: true, data: classData });
@@ -49,7 +63,7 @@ const getClassById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -59,17 +73,27 @@ const createClass = async (req, res) => {
   try {
     const classData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
     
+    // Check if section_id is present
+    const section_id = req.body.section_id;
+    
     const newClass = await mongo.insertOne(db, "classes", classData);
+
+    // Update the section to link to this class
+    if (newClass && section_id) {
+       await mongo.updateData(db, "sections", { _id: section_id }, { $set: { class_id: newClass._id.toString() } });
+    }
+
     res.status(201).json({ success: true, data: newClass });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -78,10 +102,15 @@ const updateClass = async (req, res) => {
   console.log(`[PUT] /classes/${req.params.id} hit`);
   const { db, client } = await mongoConnect();
   try {
+    // Get old class data to see if section changed
+    const oldClass = await mongo.fetchOne(db, "classes", { _id: req.params.id });
+    const oldSectionId = oldClass ? oldClass.section_id : null;
+    const newSectionId = req.body.section_id;
+
     const result = await mongo.updateData(
       db,
       "classes",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -93,13 +122,25 @@ const updateClass = async (req, res) => {
     if (!result) {
       return res.status(404).json({ success: false, message: "Class not found" });
     }
+
+    // Handle section re-linking
+    if (oldSectionId !== newSectionId) {
+        // Clear old section
+        if (oldSectionId) {
+            await mongo.updateData(db, "sections", { _id: oldSectionId }, { $set: { class_id: "" } });
+        }
+        // Link new section
+        if (newSectionId) {
+            await mongo.updateData(db, "sections", { _id: newSectionId }, { $set: { class_id: req.params.id } });
+        }
+    }
     
     res.status(200).json({ success: true, message: "Class updated successfully" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -108,7 +149,7 @@ const deleteClass = async (req, res) => {
   console.log(`[DELETE] /classes/${req.params.id} hit`);
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "classes", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "classes", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Class not found" });
@@ -119,7 +160,7 @@ const deleteClass = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

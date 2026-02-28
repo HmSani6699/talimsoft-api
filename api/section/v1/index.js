@@ -9,17 +9,19 @@ const mongoConnect = require(`${root}/services/mongo-connect`);
 // Joi Schema for Section
 const sectionSchema = Joi.object({
   name: Joi.string().required(),
-  class_id: Joi.string().required(),
+  status: Joi.string().valid("active", "inactive").default("active"),
+  class_id: Joi.string().allow(null, ""),
   capacity: Joi.number().allow(null, 0),
   roomNumber: Joi.string().allow(""),
   teacher_id: Joi.string().allow(null, ""), 
+  subjects: Joi.array().items(Joi.string()).allow(null),
 });
 
 // Get all sections
 const getAllSections = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.class_id) query.class_id = req.query.class_id;
     
     const sections = await mongo.fetchMany(db, "sections", query, {}, { name: 1 });
@@ -29,7 +31,7 @@ const getAllSections = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -37,14 +39,14 @@ const getAllSections = async (req, res) => {
 const getSectionById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const section = await mongo.fetchOne(db, "sections", { _id: req.params.id });
+    const section = await mongo.fetchOne(db, "sections", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!section) {
       return res.status(404).json({ success: false, message: "Section not found" });
     }
     
     // Get class info
     if (section.class_id) {
-      const classInfo = await mongo.fetchOne(db, "classes", { _id: section.class_id });
+      const classInfo = await mongo.fetchOne(db, "classes", { _id: section.class_id, madrasa_id: req.user.madrasa_id });
       section.class = classInfo;
     }
     
@@ -53,7 +55,7 @@ const getSectionById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -63,6 +65,7 @@ const createSection = async (req, res) => {
   try {
     const sectionData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -73,7 +76,7 @@ const createSection = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -84,7 +87,7 @@ const updateSection = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "sections",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -102,7 +105,7 @@ const updateSection = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -110,7 +113,7 @@ const updateSection = async (req, res) => {
 const deleteSection = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "sections", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "sections", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Section not found" });
@@ -121,7 +124,7 @@ const deleteSection = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

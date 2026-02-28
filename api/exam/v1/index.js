@@ -21,7 +21,7 @@ const examSchema = Joi.object({
 const getAllExams = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.exam_name_id) query.exam_name_id = req.query.exam_name_id;
     if (req.query.class_id) query.class_id = req.query.class_id;
     if (req.query.academic_year) query.academic_year = req.query.academic_year;
@@ -33,7 +33,7 @@ const getAllExams = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -41,14 +41,14 @@ const getAllExams = async (req, res) => {
 const getExamById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const exam = await mongo.fetchOne(db, "exams", { _id: req.params.id });
+    const exam = await mongo.fetchOne(db, "exams", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!exam) {
       return res.status(404).json({ success: false, message: "Exam not found" });
     }
     
     // Get exam name details
     if (exam.exam_name_id) {
-      const examName = await mongo.fetchOne(db, "exam_names", { _id: exam.exam_name_id });
+      const examName = await mongo.fetchOne(db, "exam_names", { _id: exam.exam_name_id, madrasa_id: req.user.madrasa_id });
       exam.exam_name = examName;
     }
     
@@ -57,7 +57,7 @@ const getExamById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -67,6 +67,7 @@ const createExam = async (req, res) => {
   try {
     const examData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -77,7 +78,7 @@ const createExam = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -88,7 +89,7 @@ const updateExam = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "exams",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -106,7 +107,7 @@ const updateExam = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -114,7 +115,7 @@ const updateExam = async (req, res) => {
 const deleteExam = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "exams", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "exams", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Exam not found" });
@@ -125,7 +126,7 @@ const deleteExam = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

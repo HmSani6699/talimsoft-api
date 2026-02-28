@@ -1,9 +1,12 @@
 const router = require("express").Router();
 const root = require("app-root-path");
 const { ObjectId } = require("mongodb");
-const bcrypt = require("bcryptjs");
 const Joi = require("joi");
 const validate = require(`${root}/middleware/validate`);
+const authMiddleware = require(`${root}/middleware/authenticate`);
+const rbacMiddleware = require(`${root}/middleware/rbacMiddleware`);
+const tenantMiddleware = require(`${root}/middleware/tenantMiddleware`);
+const authService = require(`${root}/services/auth.service`);
 
 const mongo = require(`${root}/services/mongo-crud`);
 const mongoConnect = require(`${root}/services/mongo-connect`);
@@ -14,7 +17,7 @@ const staffSchema = Joi.object({
   role: Joi.string().required(),
   joinDate: Joi.date().required(),
   designation: Joi.string().required(),
-  department: Joi.string().required(),
+  department: Joi.string(),
   qualification: Joi.string().allow(""),
   totalExperience: Joi.string().allow(""),
 
@@ -63,13 +66,17 @@ const staffSchema = Joi.object({
 
 // Create new staff (Transaction: Create User -> Create Staff Profile)
 const createStaff = async (req, res) => {
-  const { db, client } = await mongoConnect();
-  const session = client.startSession();
-  
+  let client, session, db;
   try {
+    const connection = await mongoConnect();
+    db = connection.db;
+    client = connection.client;
+    session = client.startSession();
+    
     session.startTransaction();
     
     const payload = req.body;
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
 
     // 1. Create User Identity (if email provided)
     let userId = null;
@@ -80,12 +87,14 @@ const createStaff = async (req, res) => {
             throw new Error("User with this email already exists");
         }
 
-        const hashedPassword = await bcrypt.hash(payload.password, 10);
+        const hashedPassword = await authService.hashPassword(payload.password);
         const newUser = await db.collection("users").insertOne({
             email: payload.email,
             password: hashedPassword,
             role: payload.role.toLowerCase(), // teacher, staff, accountant
             username: payload.name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000),
+            madrasa_id: madrasaId,
+            reference_id: null, // Will update after creating staff profile
             created_at: Date.now(),
             updated_at: Date.now()
         }, { session });
@@ -96,6 +105,7 @@ const createStaff = async (req, res) => {
     // 2. Create Staff Profile
     const staffData = {
         userId: userId,
+        madrasa_id: madrasaId,
         name: payload.name,
         role: payload.role,
         designation: payload.designation, // Should be ID/String depending on frontend. Schema says string
@@ -131,6 +141,15 @@ const createStaff = async (req, res) => {
     };
 
     const newStaff = await db.collection("staff").insertOne(staffData, { session });
+    
+    // Update user with reference_id if user was created
+    if (userId) {
+        await db.collection("users").updateOne(
+            { _id: userId },
+            { $set: { reference_id: newStaff.insertedId } },
+            { session }
+        );
+    }
 
     await session.commitTransaction();
     
@@ -144,12 +163,18 @@ const createStaff = async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session && session.transaction.isActive) {
+        await session.abortTransaction();
+    }
     console.error("Staff Creation Error:", error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    session.endSession();
-    await client.close();
+    if (session) {
+        await session.endSession();
+    }
+    if (client) {
+        // await // client.close();
+    }
   }
 };
 
@@ -158,6 +183,19 @@ const updateStaff = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const payload = req.body;
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
+    // Multi-tenant validation - check staff exists and belongs to same madrasa
+    const existingStaff = await mongo.fetchOne(db, "staff", { _id: req.params.id });
+    if (!existingStaff) {
+      return res.status(404).json({ success: false, message: "Staff not found" });
+    }
+    
+    if (req.user.role !== 'super_admin') {
+      if (!madrasaId || !existingStaff.madrasa_id || existingStaff.madrasa_id.toString() !== madrasaId.toString()) {
+        return res.status(403).json({ success: false, message: "Access denied. Staff belongs to different madrasa." });
+      }
+    }
     
     // Prepare update object
     const updateFields = {
@@ -210,7 +248,7 @@ const updateStaff = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -218,7 +256,18 @@ const updateStaff = async (req, res) => {
 const getAllStaff = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
+      const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+      
       const query = {};
+      
+      // Multi-tenant filtering (Super Admin can see all)
+      if (req.user.role !== 'super_admin') {
+        if (!madrasaId) {
+          return res.status(403).json({ success: false, message: "Access denied. No madrasa associated." });
+        }
+        query.madrasa_id = madrasaId;
+      }
+      
       if (req.query.role) query.role = req.query.role;
       if (req.query.department) query.department = req.query.department;
       if (req.query.status) query.status = req.query.status;
@@ -234,7 +283,7 @@ const getAllStaff = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
 };
 
@@ -242,9 +291,18 @@ const getAllStaff = async (req, res) => {
 const getStaffById = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
+      const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+      
       const staff = await mongo.fetchOne(db, "staff", { _id: req.params.id });
       if (!staff) {
         return res.status(404).json({ success: false, message: "Staff not found" });
+      }
+      
+      // Multi-tenant validation (Super Admin can access all)
+      if (req.user.role !== 'super_admin') {
+        if (!madrasaId || !staff.madrasa_id || staff.madrasa_id.toString() !== madrasaId.toString()) {
+          return res.status(403).json({ success: false, message: "Access denied. Staff belongs to different madrasa." });
+        }
       }
       
       // Fetch user email if linked
@@ -258,7 +316,7 @@ const getStaffById = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
 };
 
@@ -266,6 +324,20 @@ const getStaffById = async (req, res) => {
 const deleteStaff = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
+      const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+      
+      // Multi-tenant validation - check staff exists and belongs to same madrasa
+      const existingStaff = await mongo.fetchOne(db, "staff", { _id: req.params.id });
+      if (!existingStaff) {
+        return res.status(404).json({ success: false, message: "Staff not found" });
+      }
+      
+      if (req.user.role !== 'super_admin') {
+        if (!madrasaId || !existingStaff.madrasa_id || existingStaff.madrasa_id.toString() !== madrasaId.toString()) {
+          return res.status(403).json({ success: false, message: "Access denied. Staff belongs to different madrasa." });
+        }
+      }
+      
       const result = await mongo.deleteData(db, "staff", { _id: req.params.id });
       
       if (!result) {
@@ -277,14 +349,18 @@ const deleteStaff = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
 };
 
-router.get("/staff", getAllStaff);
-router.get("/staff/:id", getStaffById);
-router.post("/staff", validate(staffSchema), createStaff);
-router.put("/staff/:id", validate(staffSchema), updateStaff);
-router.delete("/staff/:id", deleteStaff);
+// Routes with Middleware
+router.use(authMiddleware); // Authenticate first
+router.use(tenantMiddleware); // Check Tenant
+
+router.get("/staff", rbacMiddleware(['admin', 'super_admin', 'teacher', 'staff']), getAllStaff);
+router.get("/staff/:id", rbacMiddleware(['admin', 'super_admin', 'teacher', 'staff']), getStaffById);
+router.post("/staff", rbacMiddleware(['admin', 'super_admin']), validate(staffSchema), createStaff);
+router.put("/staff/:id", rbacMiddleware(['admin', 'super_admin']), validate(staffSchema), updateStaff);
+router.delete("/staff/:id", rbacMiddleware(['admin', 'super_admin']), deleteStaff);
 
 module.exports = router;

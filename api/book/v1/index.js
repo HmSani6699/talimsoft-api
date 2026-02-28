@@ -21,7 +21,7 @@ const bookSchema = Joi.object({
 const getAllBooks = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.category) query.category = req.query.category;
     if (req.query.author) query.author = { $regex: req.query.author, $options: "i" };
     if (req.query.title) query.title = { $regex: req.query.title, $options: "i" };
@@ -36,7 +36,7 @@ const getAllBooks = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -44,7 +44,7 @@ const getAllBooks = async (req, res) => {
 const getBookById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const book = await mongo.fetchOne(db, "books", { _id: req.params.id });
+    const book = await mongo.fetchOne(db, "books", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!book) {
       return res.status(404).json({ success: false, message: "Book not found" });
     }
@@ -53,7 +53,7 @@ const getBookById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -63,6 +63,7 @@ const createBook = async (req, res) => {
   try {
     const bookData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       available_qty: req.body.quantity, // Initially available = total
       created_at: Date.now(),
       updated_at: Date.now()
@@ -74,7 +75,7 @@ const createBook = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -92,7 +93,7 @@ const updateBook = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "books",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -110,7 +111,7 @@ const updateBook = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -119,9 +120,9 @@ const deleteBook = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     // Check if issued
-    // const issued = await mongo.documentCount(db, "book_issues", { book_id: req.params.id, status: "Issued" });
+    // const issued = await mongo.documentCount(db, "book_issues", { book_id: req.params.id, madrasa_id: req.user.madrasa_id, status: "Issued" });
     
-    const result = await mongo.deleteData(db, "books", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "books", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Book not found" });
@@ -132,7 +133,7 @@ const deleteBook = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

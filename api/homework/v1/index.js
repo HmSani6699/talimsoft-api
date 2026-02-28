@@ -22,7 +22,7 @@ const homeworkSchema = Joi.object({
 const getAllHomework = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.class_id) query.class_id = req.query.class_id;
     if (req.query.section_id) query.section_id = req.query.section_id;
     if (req.query.subject_id) query.subject_id = req.query.subject_id;
@@ -38,7 +38,7 @@ const getAllHomework = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -46,7 +46,7 @@ const getAllHomework = async (req, res) => {
 const getHomeworkById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const homework = await mongo.fetchOne(db, "homework", { _id: req.params.id });
+    const homework = await mongo.fetchOne(db, "homework", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!homework) {
       return res.status(404).json({ success: false, message: "Homework not found" });
     }
@@ -55,7 +55,7 @@ const getHomeworkById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -65,6 +65,7 @@ const createHomework = async (req, res) => {
   try {
     const homeworkData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -75,7 +76,7 @@ const createHomework = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

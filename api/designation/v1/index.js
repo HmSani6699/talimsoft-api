@@ -1,14 +1,29 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 
 const mongo = require(`${root}/services/mongo-crud`);
 const mongoConnect = require(`${root}/services/mongo-connect`);
+const authMiddleware = require(`${root}/middleware/authenticate`);
+const rbacMiddleware = require(`${root}/middleware/rbacMiddleware`);
+const tenantMiddleware = require(`${root}/middleware/tenantMiddleware`);
 
 // Get all designations
 const getAllDesignations = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
     const query = {};
+    
+    // Multi-tenant filtering (Super Admin can see all)
+    if (req.user.role !== 'super_admin') {
+      if (!madrasaId) {
+        return res.status(403).json({ success: false, message: "Access denied. No madrasa associated." });
+      }
+      query.madrasa_id = madrasaId;
+    }
+    
     if (req.query.department) query.department = req.query.department;
 
     const page = parseInt(req.query.page) || 0;
@@ -22,7 +37,7 @@ const getAllDesignations = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -30,25 +45,43 @@ const getAllDesignations = async (req, res) => {
 const getDesignationById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
     const designation = await mongo.fetchOne(db, "designations", { _id: req.params.id });
     if (!designation) {
       return res.status(404).json({ success: false, message: "Designation not found" });
     }
+    
+    // Multi-tenant validation (Super Admin can access all)
+    if (req.user.role !== 'super_admin') {
+      if (!madrasaId || !designation.madrasa_id || designation.madrasa_id.toString() !== madrasaId.toString()) {
+        return res.status(403).json({ success: false, message: "Access denied. Designation belongs to different madrasa." });
+      }
+    }
+    
     res.status(200).json({ success: true, data: designation });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
 // Create new designation
 const createDesignation = async (req, res) => {
   const { db, client } = await mongoConnect();
+
   try {
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
+    if (!madrasaId) {
+      return res.status(403).json({ success: false, message: "Access denied. No madrasa associated." });
+    }
+    
     const designationData = {
       ...req.body,
+      madrasa_id: madrasaId,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -59,7 +92,7 @@ const createDesignation = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -67,6 +100,20 @@ const createDesignation = async (req, res) => {
 const updateDesignation = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
+    // Multi-tenant validation - check designation exists and belongs to same madrasa
+    const existingDesignation = await mongo.fetchOne(db, "designations", { _id: req.params.id });
+    if (!existingDesignation) {
+      return res.status(404).json({ success: false, message: "Designation not found" });
+    }
+    
+    if (req.user.role !== 'super_admin') {
+      if (!madrasaId || !existingDesignation.madrasa_id || existingDesignation.madrasa_id.toString() !== madrasaId.toString()) {
+        return res.status(403).json({ success: false, message: "Access denied. Designation belongs to different madrasa." });
+      }
+    }
+    
     const result = await mongo.updateData(
       db,
       "designations",
@@ -88,7 +135,7 @@ const updateDesignation = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -96,6 +143,20 @@ const updateDesignation = async (req, res) => {
 const deleteDesignation = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+    
+    // Multi-tenant validation - check designation exists and belongs to same madrasa
+    const existingDesignation = await mongo.fetchOne(db, "designations", { _id: req.params.id });
+    if (!existingDesignation) {
+      return res.status(404).json({ success: false, message: "Designation not found" });
+    }
+    
+    if (req.user.role !== 'super_admin') {
+      if (!madrasaId || !existingDesignation.madrasa_id || existingDesignation.madrasa_id.toString() !== madrasaId.toString()) {
+        return res.status(403).json({ success: false, message: "Access denied. Designation belongs to different madrasa." });
+      }
+    }
+    
     const result = await mongo.deleteData(db, "designations", { _id: req.params.id });
     
     if (!result) {
@@ -107,15 +168,19 @@ const deleteDesignation = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
-// Routes
-router.get("/designations", getAllDesignations);
-router.get("/designations/:id", getDesignationById);
-router.post("/designations", createDesignation);
-router.put("/designations/:id", updateDesignation);
-router.delete("/designations/:id", deleteDesignation);
+// Apply middleware to all routes
+router.use(authMiddleware); // Authenticate first
+router.use(tenantMiddleware); // Check Tenant
+
+// Routes with RBAC
+router.get("/designations", rbacMiddleware(['admin', 'super_admin', 'teacher', 'staff']), getAllDesignations);
+router.get("/designations/:id", rbacMiddleware(['admin', 'super_admin', 'teacher', 'staff']), getDesignationById);
+router.post("/designations", rbacMiddleware(['admin', 'super_admin']), createDesignation);
+router.put("/designations/:id", rbacMiddleware(['admin', 'super_admin']), updateDesignation);
+router.delete("/designations/:id", rbacMiddleware(['admin', 'super_admin']), deleteDesignation);
 
 module.exports = router;

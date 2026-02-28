@@ -26,9 +26,10 @@ const issueCertificate = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const { student_id, type } = req.body;
+    const madrasaId = req.user.madrasa_id;
     
     // Fetch current student data for snapshot
-    const student = await mongo.fetchOne(db, "students", { _id: student_id });
+    const student = await mongo.fetchOne(db, "students", { _id: student_id, madrasa_id: madrasaId });
     if (!student) return res.status(404).json({ success: false, message: "Student not found" });
 
     // Look up class/section names if needed for snapshot
@@ -36,16 +37,17 @@ const issueCertificate = async (req, res) => {
     let sectionName = "";
 
     if (student.class_id) {
-        const c = await mongo.fetchOne(db, "classes", { _id: student.class_id });
+        const c = await mongo.fetchOne(db, "classes", { _id: student.class_id, madrasa_id: madrasaId });
         if (c) className = c.name;
     }
     if (student.section_id) {
-        const s = await mongo.fetchOne(db, "sections", { _id: student.section_id });
+        const s = await mongo.fetchOne(db, "sections", { _id: student.section_id, madrasa_id: madrasaId });
         if (s) sectionName = s.name;
     }
 
     const certData = {
       ...req.body,
+      madrasa_id: madrasaId,
       certificate_no: generateSerial(),
       content_snapshot: {
           name: `${student.firstName} ${student.lastName || ""}`.trim(),
@@ -65,7 +67,7 @@ const issueCertificate = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -73,7 +75,7 @@ const issueCertificate = async (req, res) => {
 const getAllCertificates = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-      const query = {};
+      const query = { madrasa_id: req.user.madrasa_id };
       if (req.query.student_id) query.student_id = req.query.student_id;
       if (req.query.type) query.type = req.query.type;
       
@@ -83,7 +85,7 @@ const getAllCertificates = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
 };
 
@@ -91,7 +93,8 @@ const getAllCertificates = async (req, res) => {
 const getStudentIdCardData = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-        const query = { status: "Active" }; // Only active students
+        const madrasaId = req.user.madrasa_id;
+        const query = { status: "Active", madrasa_id: madrasaId };
         if (req.query.class_id) query.class_id = req.query.class_id;
         if (req.query.section_id) query.section_id = req.query.section_id;
 
@@ -105,11 +108,11 @@ const getStudentIdCardData = async (req, res) => {
             let className = "";
             let sectionName = "";
             if (s.class_id) {
-                const c = await mongo.fetchOne(db, "classes", { _id: s.class_id });
+                const c = await mongo.fetchOne(db, "classes", { _id: s.class_id, madrasa_id: madrasaId });
                 if (c) className = c.name;
             }
             if (s.section_id) {
-                 const sec = await mongo.fetchOne(db, "sections", { _id: s.section_id });
+                 const sec = await mongo.fetchOne(db, "sections", { _id: s.section_id, madrasa_id: madrasaId });
                  if (sec) sectionName = sec.name;
             }
             
@@ -131,7 +134,7 @@ const getStudentIdCardData = async (req, res) => {
         console.log(error);
         res.status(500).json({ success: false, message: error.message });
     } finally {
-        await client.close();
+        // await // client.close();
     }
 };
 
@@ -140,7 +143,8 @@ const getStudentIdCardData = async (req, res) => {
 const getStaffIdCardData = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
-        const query = { status: "Active" };
+        const madrasaId = req.user.madrasa_id;
+        const query = { status: "Active", madrasa_id: madrasaId };
         if (req.query.role) query.role = req.query.role;
 
         const staff = await mongo.fetchMany(db, "staff", query, {}, { name: 1 });
@@ -150,11 +154,11 @@ const getStaffIdCardData = async (req, res) => {
              let desigName = "";
              // Fetch dept/designation if IDs exist
              if (s.department_id) {
-                 const d = await mongo.fetchOne(db, "departments", { _id: s.department_id });
+                 const d = await mongo.fetchOne(db, "departments", { _id: s.department_id, madrasa_id: madrasaId });
                  if (d) deptName = d.name;
              }
              if (s.designation_id) {
-                 const deg = await mongo.fetchOne(db, "designations", { _id: s.designation_id });
+                 const deg = await mongo.fetchOne(db, "designations", { _id: s.designation_id, madrasa_id: madrasaId });
                  if (deg) desigName = deg.name;
              }
              
@@ -176,7 +180,7 @@ const getStaffIdCardData = async (req, res) => {
         console.log(error);
         res.status(500).json({ success: false, message: error.message });
     } finally {
-        await client.close();
+        // await // client.close();
     }
 };
 

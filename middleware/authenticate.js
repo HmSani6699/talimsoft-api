@@ -1,56 +1,45 @@
-var admin = require("firebase-admin");
+const authService = require('../services/auth.service');
 
-// Only initialize Firebase if credentials are provided
-let firebaseInitialized = false;
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+const authMiddleware = async (req, res, next) => {
   try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: serviceAccount.project_id,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key.replace(/\\n/g, "\n"),
-      }),
-    });
-    firebaseInitialized = true;
-    console.log("Firebase authentication initialized");
-  } catch (error) {
-    console.warn("Firebase initialization failed:", error.message);
-    console.warn("Server will run without Firebase authentication");
-  }
-} else {
-  console.warn("FIREBASE_SERVICE_ACCOUNT not configured - Firebase authentication disabled");
-}
+    const authHeader = req.headers.authorization;
 
-const authRoute = async (req, res, next) => {
-  // Skip authentication if Firebase is not initialized
-  if (!firebaseInitialized) {
-    console.warn("Authentication skipped - Firebase not initialized");
-    return next();
-  }
-
-  if (req.headers?.authorization) {
-    try {
-      const token = req.headers.authorization.split(" ")[1];
-      // verify user token
-      const decodedUser = await admin.auth().verifyIdToken(token);
-      const email = decodedUser.email
-      const userId = decodedUser.uid
-      if (!email) {
-        throw new Error("No email found in decoded user");
-      } if (!userId) {
-        throw new Error("No userId found in decoded user");
-      }
-      req.headers.user = {
-        email,
-        userId
-      }
-      next();
-    } catch (err) {
-      return res.status(403).send({ error: "Not Authorized", message: err.message });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Access denied. No token provided.' 
+      });
     }
-  } else {
-    return res.status(401).send({ error: "Not Authorized", message: "No auth header found" });
+
+    const token = authHeader.split(' ')[1];
+    const decoded = authService.verifyAccessToken(token);
+
+    if (!decoded) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or expired token.' 
+      });
+    }
+
+    // Attach user info to request
+    req.user = decoded;
+    
+    // Legacy support (optional, if existing code uses req.headers.user)
+    req.headers.user = {
+        userId: decoded.userId,
+        email: decoded.email, // Might be undefined if not in payload
+        role: decoded.role,
+        madrasa_id: decoded.madrasa_id
+    };
+
+    next();
+  } catch (error) {
+    console.error("Auth Middleware Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error during authentication.' 
+    });
   }
 };
-module.exports = authRoute;
+
+module.exports = authMiddleware;

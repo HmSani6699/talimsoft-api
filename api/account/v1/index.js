@@ -22,7 +22,7 @@ const accountSchema = Joi.object({
 const getAllAccounts = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.type) query.type = req.query.type;
     if (req.query.status) query.status = req.query.status;
     
@@ -33,7 +33,7 @@ const getAllAccounts = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -41,7 +41,7 @@ const getAllAccounts = async (req, res) => {
 const getAccountById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const account = await mongo.fetchOne(db, "accounts", { _id: req.params.id });
+    const account = await mongo.fetchOne(db, "accounts", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!account) {
       return res.status(404).json({ success: false, message: "Account not found" });
     }
@@ -50,7 +50,7 @@ const getAccountById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -60,6 +60,7 @@ const createAccount = async (req, res) => {
   try {
     const accountData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -70,7 +71,7 @@ const createAccount = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -81,7 +82,7 @@ const updateAccount = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "accounts",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -99,7 +100,7 @@ const updateAccount = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -108,13 +109,14 @@ const updateAccount = async (req, res) => {
 const deleteAccount = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    const madrasaId = req.user.madrasa_id;
     // Check usage
-    const usage = await mongo.documentCount(db, "transactions", { account_id: req.params.id });
+    const usage = await mongo.documentCount(db, "transactions", { account_id: req.params.id, madrasa_id: madrasaId });
     if (usage > 0) {
         return res.status(400).json({ success: false, message: "Cannot delete account with existing transactions" });
     }
 
-    const result = await mongo.deleteData(db, "accounts", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "accounts", { _id: req.params.id, madrasa_id: madrasaId });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Account not found" });
@@ -125,7 +127,7 @@ const deleteAccount = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

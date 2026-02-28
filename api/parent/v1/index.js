@@ -35,9 +35,9 @@ const parentUpdateSchema = parentSchema.fork(
 const getAllParents = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const matchQuery = { madrasa_id: req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null };
     if (req.query.search) {
-      query.$or = [
+      matchQuery.$or = [
         { fatherName: { $regex: req.query.search, $options: 'i' } },
         { motherName: { $regex: req.query.search, $options: 'i' } },
         { contact: { $regex: req.query.search, $options: 'i' } },
@@ -45,18 +45,40 @@ const getAllParents = async (req, res) => {
       ];
     }
 
-    const page = parseInt(req.query.page) || 0;
-    const limit = parseInt(req.query.limit) || 0;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
     
-    const parents = await mongo.fetchMany(db, "parents", query, {}, { created_at: -1 }, limit, page);
-    const total = await mongo.documentCount(db, "parents", query);
+    // Use aggregation to count children (students linked to this guardian)
+    const pipeline = [
+      { $match: matchQuery },
+      { $sort: { created_at: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "students",     
+          localField: "_id",
+          foreignField: "guardian_id", 
+          as: "children"
+        }
+      },
+      {
+        $addFields: {
+          childrenCount: { $size: "$children" }
+        }
+      }
+    ];
+
+    const parents = await db.collection("parents").aggregate(pipeline).toArray();
+    const total = await mongo.documentCount(db, "parents", matchQuery);
     
     res.status(200).json({ success: true, data: parents, total });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await client.close();
   }
 };
 
@@ -64,7 +86,7 @@ const getAllParents = async (req, res) => {
 const getParentById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const parent = await mongo.fetchOne(db, "parents", { _id: req.params.id });
+    const parent = await mongo.fetchOne(db, "parents", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!parent) {
       return res.status(404).json({ success: false, message: "Parent not found" });
     }
@@ -73,7 +95,7 @@ const getParentById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -81,14 +103,20 @@ const getParentById = async (req, res) => {
 const getParentStudents = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid Parent ID format" });
+    }
     // using guardian_id as per student schema
-    const students = await mongo.fetchMany(db, "students", { guardian_id: new ObjectId(req.params.id) });
+    const students = await mongo.fetchMany(db, "students", { 
+        guardian_id: new ObjectId(req.params.id),
+        madrasa_id: req.user.madrasa_id 
+    });
     res.status(200).json({ success: true, data: students });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -96,14 +124,18 @@ const getParentStudents = async (req, res) => {
 const createParent = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    // Check for duplicate contact
-    const existing = await mongo.fetchOne(db, "parents", { contact: req.body.contact });
+    // Check for duplicate contact within same madrasa
+    const existing = await mongo.fetchOne(db, "parents", { 
+        contact: req.body.contact,
+        madrasa_id: req.user.madrasa_id
+    });
     if (existing) {
         return res.status(409).json({ success: false, message: "Guardian with this contact already exists" });
     }
 
     const parentData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -114,7 +146,7 @@ const createParent = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -124,11 +156,12 @@ const updateParent = async (req, res) => {
   try {
     const payload = { ...req.body };
     payload.updated_at = Date.now();
+    if (payload.madrasa_id) payload.madrasa_id = new ObjectId(payload.madrasa_id);
 
     const result = await mongo.updateData(
       db,
       "parents",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       { $set: payload }
     );
     
@@ -141,7 +174,7 @@ const updateParent = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -152,7 +185,7 @@ const deleteParent = async (req, res) => {
     // Optional: Check if parent has students before deleting?
     // For now, allow delete.
     
-    const result = await mongo.deleteData(db, "parents", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "parents", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Parent not found" });
@@ -163,11 +196,17 @@ const deleteParent = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
 // Routes
+const authMiddleware = require(`${root}/middleware/authenticate`);
+const tenantMiddleware = require(`${root}/middleware/tenantMiddleware`);
+
+router.use(authMiddleware);
+router.use(tenantMiddleware);
+
 router.get("/parents", getAllParents);
 router.get("/parents/:id", getParentById);
 router.get("/parents/:id/students", getParentStudents);

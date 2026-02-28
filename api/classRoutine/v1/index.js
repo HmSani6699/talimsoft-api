@@ -29,13 +29,14 @@ const createOrUpdateRoutine = async (req, res) => {
     const { class_id, section_id, day, periods } = req.body;
     
     // Check if exists
-    const query = { class_id, section_id, day };
+    const query = { class_id, section_id, day, madrasa_id: req.user.madrasa_id };
     
     const updateDocs = {
         class_id,
         section_id,
         day,
         periods,
+        madrasa_id: req.user.madrasa_id,
         updated_at: Date.now()
     };
 
@@ -54,7 +55,7 @@ const createOrUpdateRoutine = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -62,27 +63,61 @@ const createOrUpdateRoutine = async (req, res) => {
 const getAllRoutines = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.class_id) query.class_id = req.query.class_id;
     if (req.query.section_id) query.section_id = req.query.section_id;
-    if (req.query.teacher_id) query["periods.teacher_id"] = req.query.teacher_id; // Query nested array
     if (req.query.day) query.day = req.query.day;
     
-    const routines = await mongo.fetchMany(db, "class_routines", query, {}, { day: 1 });
+    let routines = await db.collection("class_routines").find(query).toArray();
     
-    // Custom sort for days could be handled in code or if we stored day index
+    // Populate subjects and teachers
+    for (let routine of routines) {
+        for (let period of routine.periods) {
+            if (period.subject_id) {
+                const sub = await mongo.fetchOne(db, "subjects", { _id: period.subject_id });
+                if (sub) period.subject = sub;
+            }
+            if (period.teacher_id) {
+                const teach = await mongo.fetchOne(db, "staff", { _id: period.teacher_id });
+                if (teach) period.teacher = teach;
+            }
+        }
+    }
     
     res.status(200).json({ success: true, data: routines });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
+  }
+};
+
+// Delete routine
+const deleteRoutine = async (req, res) => {
+  const { db, client } = await mongoConnect();
+  try {
+    const result = await mongo.deleteData(db, "class_routines", {
+      _id: req.params.id,
+      madrasa_id: req.user.madrasa_id
+    });
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: "Routine not found" });
+    }
+    
+    res.status(200).json({ success: true, message: "Routine deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    // await // client.close();
   }
 };
 
 // Routes
 router.get("/class-routines", getAllRoutines);
 router.post("/class-routines", validate(routineSchema), createOrUpdateRoutine);
+router.delete("/class-routines/:id", deleteRoutine);
 
 module.exports = router;

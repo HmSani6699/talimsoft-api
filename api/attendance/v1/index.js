@@ -40,10 +40,12 @@ const markStudentAttendance = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const { class_id, section_id, date, records, takenBy } = req.body;
+    const madrasa_id = req.user.madrasa_id;
     
     // Transform records for insertion
     const attendanceDocs = records.map(record => ({
       type: "student",
+      madrasa_id,
       class_id,
       section_id,
       student_id: record.student_id,
@@ -62,6 +64,7 @@ const markStudentAttendance = async (req, res) => {
     
     await db.collection("attendance").deleteMany({
         type: "student",
+        madrasa_id,
         class_id,
         section_id,
         date: { $gte: startOfDay, $lte: endOfDay }
@@ -73,7 +76,7 @@ const markStudentAttendance = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -82,9 +85,11 @@ const markStaffAttendance = async (req, res) => {
     const { db, client } = await mongoConnect();
     try {
       const { date, records, takenBy } = req.body;
+      const madrasa_id = req.user.madrasa_id;
       
       const attendanceDocs = records.map(record => ({
         type: "staff",
+        madrasa_id,
         staff_id: record.staff_id,
         date: new Date(date),
         status: record.status,
@@ -100,10 +105,9 @@ const markStaffAttendance = async (req, res) => {
       const endOfDay = new Date(date); endOfDay.setHours(23,59,59,999);
       
       // Clear existing for this date
-      // Note: This wipes everyone's attendance for the day if re-submitted. 
-      // Ideally, frontend sends delta or we handle upsert. For now, bulk replace daily sheet.
       await db.collection("attendance").deleteMany({
           type: "staff",
+          madrasa_id,
           date: { $gte: startOfDay, $lte: endOfDay }
       });
   
@@ -113,7 +117,7 @@ const markStaffAttendance = async (req, res) => {
       console.log(error);
       res.status(500).json({ success: false, message: error.message });
     } finally {
-      await client.close();
+      // await // client.close();
     }
 };
 
@@ -122,7 +126,8 @@ const getAttendanceReport = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const query = {
-      type: req.query.type // student or staff
+      type: req.query.type, // student or staff
+      madrasa_id: req.user.madrasa_id
     };
     
     if (req.query.class_id) query.class_id = req.query.class_id;
@@ -150,7 +155,7 @@ const getAttendanceReport = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

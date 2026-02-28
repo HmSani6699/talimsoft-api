@@ -21,7 +21,7 @@
     "jsonwebtoken": "^7.3.0",
     "lodash": "^4.17.20",
     "moment": "^2.24.0",
-    "mongodb": "^3.5.9",
+    "mongodb": "^7.1.0",
     "uuid": "^8.3.0"
   },
   "devDependencies": {

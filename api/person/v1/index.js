@@ -10,27 +10,28 @@ const authorize = require(`${root}/middleware/authorize`);
 getPersonData = async (req, res, next) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = req.query;
+    const query = { ...req.query, madrasa_id: req.user.madrasa_id };
     const person = await mongo.fetchOne(db, "person", query);
     res.status(200).json({ success: true, person });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
 setPersonData = async (req, res, next) => {
   const { db, client } = await mongoConnect();
   try {
-    const person = await mongo.insertOne(db, "person", req.body);
+    const personData = { ...req.body, madrasa_id: req.user.madrasa_id };
+    const person = await mongo.insertOne(db, "person", personData);
     res.status(200).json({ success: true, person });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 updatePersonData = async (req, res, next) => {
@@ -41,6 +42,7 @@ updatePersonData = async (req, res, next) => {
       "person",
       {
         username: req.params.username,
+        madrasa_id: req.user.madrasa_id
       },
       {
         $set: {
@@ -54,7 +56,7 @@ updatePersonData = async (req, res, next) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 router.get("/person", getPersonData);

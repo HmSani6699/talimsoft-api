@@ -10,29 +10,52 @@ const mongoConnect = require(`${root}/services/mongo-connect`);
 const subjectSchema = Joi.object({
   name: Joi.string().required(),
   code: Joi.string().required(),
-  type: Joi.string().valid("Theory", "Practical", "Both").default("Theory"),
-  class_id: Joi.string().required(), // Subjects usually belong to a class or department
-  teacher_id: Joi.string().allow(null, ""),
-  fullMarks: Joi.number().default(100),
-  passMarks: Joi.number().default(33)
+  class_id: Joi.string().required(),
+  section_id: Joi.string().allow(null, ""),
+  status: Joi.string().valid("active", "inactive").default("active"),
 });
 
 // Get all subjects
 const getAllSubjects = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
+    
+    // Add search functionality
+    if (req.query.search) {
+      query.$or = [
+        { name: { $regex: req.query.search, $options: "i" } },
+        { code: { $regex: req.query.search, $options: "i" } }
+      ];
+    }
+    
+    // Add filters
     if (req.query.class_id) query.class_id = req.query.class_id;
+    if (req.query.section_id) query.section_id = req.query.section_id;
+    if (req.query.status) query.status = req.query.status;
     if (req.query.type) query.type = req.query.type; 
     
     const subjects = await mongo.fetchMany(db, "subjects", query, {}, { name: 1 });
+    
+    // Populate class and section names for the list
+    for (let subject of subjects) {
+      if (subject.class_id) {
+        const classInfo = await mongo.fetchOne(db, "classes", { _id: subject.class_id });
+        if (classInfo) subject.className = classInfo.name;
+      }
+      if (subject.section_id) {
+        const sectionInfo = await mongo.fetchOne(db, "sections", { _id: subject.section_id });
+        if (sectionInfo) subject.sectionName = sectionInfo.name;
+      }
+    }
+
     const total = await mongo.documentCount(db, "subjects", query);
     res.status(200).json({ success: true, data: subjects, total });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -40,14 +63,14 @@ const getAllSubjects = async (req, res) => {
 const getSubjectById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const subject = await mongo.fetchOne(db, "subjects", { _id: req.params.id });
+    const subject = await mongo.fetchOne(db, "subjects", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Subject not found" });
     }
     
     // Optional: Populate Class info
     if (subject.class_id) {
-       const classInfo = await mongo.fetchOne(db, "classes", { _id: subject.class_id });
+       const classInfo = await mongo.fetchOne(db, "classes", { _id: subject.class_id, madrasa_id: req.user.madrasa_id });
        subject.class = classInfo; 
     }
 
@@ -56,7 +79,7 @@ const getSubjectById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -66,6 +89,7 @@ const createSubject = async (req, res) => {
   try {
     const subjectData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -76,7 +100,7 @@ const createSubject = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -87,7 +111,7 @@ const updateSubject = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "subjects",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -105,7 +129,7 @@ const updateSubject = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -113,7 +137,7 @@ const updateSubject = async (req, res) => {
 const deleteSubject = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "subjects", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "subjects", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Subject not found" });
@@ -124,7 +148,7 @@ const deleteSubject = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 

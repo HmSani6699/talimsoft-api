@@ -22,7 +22,7 @@ const resultSchema = Joi.object({
 const getAllResults = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const query = {};
+    const query = { madrasa_id: req.user.madrasa_id };
     if (req.query.student_id) query.student_id = req.query.student_id;
     if (req.query.exam_id) query.exam_id = req.query.exam_id;
     if (req.query.subject_id) query.subject_id = req.query.subject_id;
@@ -38,7 +38,7 @@ const getAllResults = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -46,7 +46,7 @@ const getAllResults = async (req, res) => {
 const getResultById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.fetchOne(db, "results", { _id: req.params.id });
+    const result = await mongo.fetchOne(db, "results", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     if (!result) {
       return res.status(404).json({ success: false, message: "Result not found" });
     }
@@ -55,7 +55,7 @@ const getResultById = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -64,7 +64,8 @@ const getStudentResults = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     const query = {
-      student_id: req.params.studentId
+      student_id: req.params.studentId,
+      madrasa_id: req.user.madrasa_id
     };
     
     if (req.query.exam_id) query.exam_id = req.query.exam_id;
@@ -75,7 +76,7 @@ const getStudentResults = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -87,7 +88,8 @@ const createResult = async (req, res) => {
     const existing = await mongo.fetchOne(db, "results", {
         student_id: req.body.student_id,
         exam_id: req.body.exam_id,
-        subject_id: req.body.subject_id
+        subject_id: req.body.subject_id,
+        madrasa_id: req.user.madrasa_id
     });
     
     if (existing) {
@@ -96,6 +98,7 @@ const createResult = async (req, res) => {
 
     const resultData = {
       ...req.body,
+      madrasa_id: req.user.madrasa_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
@@ -106,7 +109,7 @@ const createResult = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -117,7 +120,7 @@ const updateResult = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "results",
-      { _id: req.params.id },
+      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -135,7 +138,7 @@ const updateResult = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
@@ -143,7 +146,7 @@ const updateResult = async (req, res) => {
 const deleteResult = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "results", { _id: req.params.id });
+    const result = await mongo.deleteData(db, "results", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Result not found" });
@@ -154,7 +157,7 @@ const deleteResult = async (req, res) => {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    await client.close();
+    // await // client.close();
   }
 };
 
