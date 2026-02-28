@@ -6,12 +6,13 @@
   "private": true,
   "scripts": {
     "dev": "set NODE_ENV=development&& nodemon app.js",
-    "start": "set NODE_ENV=production&& node app.js",
+    "start": "node app.js",
     "dev:unix": "NODE_ENV=development nodemon app.js",
     "start:unix": "NODE_ENV=production node app.js"
   },
   "dependencies": {
     "app-root-path": "^3.0.0",
+    "dotenv": "^8.1.0",
     "axios": "^0.21.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.1",
@@ -25,7 +26,6 @@
     "uuid": "^8.3.0"
   },
   "devDependencies": {
-    "dotenv": "^8.1.0",
     "nodemon": "^1.18.9"
   }
 }
