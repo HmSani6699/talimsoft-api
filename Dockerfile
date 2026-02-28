@@ -1,12 +1,18 @@
-FROM node:18-slim
+FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json /app
+COPY yarn.lock /app
 
-# Install all dependencies (dotenv is now in production deps)
-RUN yarn install --frozen-lockfile --production
 
-COPY . .
+# Install dependencies
+RUN yarn install
 
-CMD ["node", "app.js"]
+
+COPY . /app
+
+ENV CLOUD_ENV=production \
+    ALLOWED_ORIGINS=http://localhost:3000,localhost,*,undefined,http://localhost:5173,https://app.easyinvoice.ai
+
+CMD [ "yarn", "start" ]
