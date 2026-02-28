@@ -12,27 +12,20 @@ global.app = app;
 app.set("superSecret", "djkzandjkawsuodxsmsakjuhkj");
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
-if (allowedOrigins.length === 0) {
-    allowedOrigins.push("http://localhost:3000", "http://localhost:3001", "http://localhost:5173");
-}
+const allowAllOrigins = allowedOrigins.length === 0 || allowedOrigins.includes('*');
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      // If wildcard is present, allow all origins
-      if (allowedOrigins.includes('*')) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.error(`CORS Blocked for origin: ${origin}`);
-        console.error(`Allowed origins: ${JSON.stringify(allowedOrigins)}`);
-        return callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: allowAllOrigins
+      ? true  // reflects the request origin — allows all origins with credentials
+      : function (origin, callback) {
+          if (!origin) return callback(null, true);
+          if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+          }
+          console.error(`CORS Blocked for origin: ${origin}`);
+          return callback(new Error('Not allowed by CORS'));
+        },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
