@@ -88,7 +88,7 @@ app.use((err, req, res, next) => {
 
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
-  console.log(`[SUCCESS] Backend server is listening on port ${port}`);
+  console.log(`[SUCCESS] Backend server is listening on the port ${port}`);
   console.log(`[INFO] API Base URL: http://localhost:${port}/api`);
   console.log(`[INFO] Allowed Origins: ${JSON.stringify(allowedOrigins)}`);
 });
