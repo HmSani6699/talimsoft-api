@@ -91,7 +91,7 @@ app.use("/api", require("./api/ClassSyllabus"));
 app.use("/api/fee-type", require("./api/FeeType"));
 
 /* =========================
-   GLOBAL ERROR HANDLER
+   GLOBAL ERROR HANDLER  gggod
 ========================= */
 
 app.use((err, req, res, next) => {
