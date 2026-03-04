@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 const Joi = require("joi");
 const validate = require(`${root}/middleware/validate`);
 
@@ -40,11 +41,11 @@ const getAllSubjects = async (req, res) => {
     // Populate class and section names for the list
     for (let subject of subjects) {
       if (subject.class_id) {
-        const classInfo = await mongo.fetchOne(db, "classes", { _id: subject.class_id });
+        const classInfo = await mongo.fetchOne(db, "classes", { _id: new ObjectId(subject.class_id) });
         if (classInfo) subject.className = classInfo.name;
       }
       if (subject.section_id) {
-        const sectionInfo = await mongo.fetchOne(db, "sections", { _id: subject.section_id });
+        const sectionInfo = await mongo.fetchOne(db, "sections", { _id: new ObjectId(subject.section_id) });
         if (sectionInfo) subject.sectionName = sectionInfo.name;
       }
     }
@@ -63,14 +64,14 @@ const getAllSubjects = async (req, res) => {
 const getSubjectById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const subject = await mongo.fetchOne(db, "subjects", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const subject = await mongo.fetchOne(db, "subjects", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Subject not found" });
     }
     
     // Optional: Populate Class info
     if (subject.class_id) {
-       const classInfo = await mongo.fetchOne(db, "classes", { _id: subject.class_id, madrasa_id: req.user.madrasa_id });
+       const classInfo = await mongo.fetchOne(db, "classes", { _id: new ObjectId(subject.class_id), madrasa_id: req.user.madrasa_id });
        subject.class = classInfo; 
     }
 
@@ -111,7 +112,7 @@ const updateSubject = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "subjects",
-      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -137,7 +138,7 @@ const updateSubject = async (req, res) => {
 const deleteSubject = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "subjects", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const result = await mongo.deleteData(db, "subjects", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Subject not found" });

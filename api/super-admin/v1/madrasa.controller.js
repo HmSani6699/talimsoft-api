@@ -4,7 +4,7 @@ const authService = require(`${root}/services/auth.service`);
 
 const madrasaController = {
   createMadrasa: async (req, res) => {
-    const { madrasaName, address, adminName, adminEmail, adminPassword } = req.body;
+    const { madrasaName, address, adminName, adminEmail, adminPassword, plan,  } = req.body;
 
     // Validation
     if (!madrasaName || !adminEmail || !adminPassword) {
@@ -28,8 +28,10 @@ const madrasaController = {
       }
 
       // 2. Create Madrasa
+      const slug = madrasaName.toLowerCase().trim().replace(/ /g, "-").replace(/[^\w-]+/g, "");
       const madrasaPayload = {
         name: madrasaName,
+        slug: slug,
         address: address || "",
         contact_email: adminEmail,
         status: "active",
@@ -43,7 +45,7 @@ const madrasaController = {
       // 3. Create Admin User
       const hashedPassword = await authService.hashPassword(adminPassword);
       const userPayload = {
-        username: adminEmail, // Use email as username mostly for admins
+        username: adminName, // Use email as username mostly for admins
         email: adminEmail,
         password: hashedPassword,
         role: "admin",

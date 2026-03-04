@@ -41,6 +41,15 @@ const authController = {
         created_at: new Date(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       });
+      
+
+      // Fetch Madrasa info for slug
+      let madrasa_slug = "";
+      if (user.madrasa_id) {
+        const madrasa = await db.collection("madrasas").findOne({ _id: new ObjectId(user.madrasa_id) });
+      
+        if (madrasa) madrasa_slug = madrasa.slug;
+      }
 
       res.status(200).json({
         success: true,
@@ -52,7 +61,8 @@ const authController = {
             _id: user._id,
             username: user.username,
             role: user.role,
-            madrasa_id: user.madrasa_id
+            madrasa_id: user.madrasa_id,
+            madrasa_slug: madrasa_slug
           }
         }
       });

@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 const Joi = require("joi");
 const validate = require(`${root}/middleware/validate`);
 
@@ -39,14 +40,14 @@ const getAllSections = async (req, res) => {
 const getSectionById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const section = await mongo.fetchOne(db, "sections", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const section = await mongo.fetchOne(db, "sections", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     if (!section) {
       return res.status(404).json({ success: false, message: "Section not found" });
     }
     
     // Get class info
     if (section.class_id) {
-      const classInfo = await mongo.fetchOne(db, "classes", { _id: section.class_id, madrasa_id: req.user.madrasa_id });
+      const classInfo = await mongo.fetchOne(db, "classes", { _id: new ObjectId(section.class_id), madrasa_id: req.user.madrasa_id });
       section.class = classInfo;
     }
     
@@ -87,7 +88,7 @@ const updateSection = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "sections",
-      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -113,7 +114,7 @@ const updateSection = async (req, res) => {
 const deleteSection = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "sections", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const result = await mongo.deleteData(db, "sections", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Section not found" });

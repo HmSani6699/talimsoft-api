@@ -59,6 +59,7 @@ app.use("/api", require("./api/status"));
 app.use("/api/auth", require("./api/auth"));
 app.use("/api/super-admin", require("./api/super-admin"));
 app.use("/api", require("./api/person"));
+app.use("/api/portal", require("./api/portal"));
 
 app.use("/api", require("./api/admission"));
 app.use("/api", require("./api/parent"));

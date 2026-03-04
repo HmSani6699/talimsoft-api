@@ -18,7 +18,8 @@ const getMongoConnection = async () => {
         const db = client.db(dbName);
         return ({ client, db })
     } catch (error) {
-        console.log(error)
+        console.error("MongoDB Connection Error:", error);
+        throw error;
     }
 }
 module.exports = getMongoConnection;

@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 const Joi = require("joi");
 const validate = require(`${root}/middleware/validate`);
 
@@ -48,7 +49,7 @@ const getClassById = async (req, res) => {
   console.log(`[GET] /classes/${req.params.id} hit`);
   const { db, client } = await mongoConnect();
   try {
-    const query = { _id: req.params.id, madrasa_id: req.user.madrasa_id };
+    const query = { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id };
     const classData = await mongo.fetchOne(db, "classes", query);
     if (!classData) {
       return res.status(404).json({ success: false, message: "Class not found" });
@@ -85,7 +86,7 @@ const createClass = async (req, res) => {
 
     // Update the section to link to this class
     if (newClass && section_id) {
-       await mongo.updateData(db, "sections", { _id: section_id }, { $set: { class_id: newClass._id.toString() } });
+       await mongo.updateData(db, "sections", { _id: new ObjectId(section_id) }, { $set: { class_id: newClass._id.toString() } });
     }
 
     res.status(201).json({ success: true, data: newClass });
@@ -103,14 +104,14 @@ const updateClass = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
     // Get old class data to see if section changed
-    const oldClass = await mongo.fetchOne(db, "classes", { _id: req.params.id });
+    const oldClass = await mongo.fetchOne(db, "classes", { _id: new ObjectId(req.params.id) });
     const oldSectionId = oldClass ? oldClass.section_id : null;
     const newSectionId = req.body.section_id;
 
     const result = await mongo.updateData(
       db,
       "classes",
-      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -127,11 +128,11 @@ const updateClass = async (req, res) => {
     if (oldSectionId !== newSectionId) {
         // Clear old section
         if (oldSectionId) {
-            await mongo.updateData(db, "sections", { _id: oldSectionId }, { $set: { class_id: "" } });
+            await mongo.updateData(db, "sections", { _id: new ObjectId(oldSectionId) }, { $set: { class_id: "" } });
         }
         // Link new section
         if (newSectionId) {
-            await mongo.updateData(db, "sections", { _id: newSectionId }, { $set: { class_id: req.params.id } });
+            await mongo.updateData(db, "sections", { _id: new ObjectId(newSectionId) }, { $set: { class_id: req.params.id } });
         }
     }
     
@@ -149,7 +150,7 @@ const deleteClass = async (req, res) => {
   console.log(`[DELETE] /classes/${req.params.id} hit`);
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "classes", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const result = await mongo.deleteData(db, "classes", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Class not found" });

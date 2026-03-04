@@ -58,10 +58,10 @@ const admissionSchema = Joi.object({
 
 // Create new admission (Transaction: Guardian -> Students)
 const createAdmission = async (req, res) => {
-  const { db, client } = await mongoConnect();
-  const session = client.startSession();
-  
+  let session = null;
   try {
+    const { db, client } = await mongoConnect();
+    session = client.startSession();
     session.startTransaction();
     
     const payload = req.body;
@@ -196,7 +196,7 @@ const createAdmission = async (req, res) => {
     });
 
   } catch (error) {
-    if (session.inTransaction()) await session.abortTransaction();
+    if (session && session.inTransaction()) await session.abortTransaction();
     console.error("Admission Transaction Error:", error);
     
     // Better handling for RangeError/BSON size issues
@@ -210,16 +210,16 @@ const createAdmission = async (req, res) => {
 
     res.status(500).json({ success: false, message: error.message });
   } finally {
-    session.endSession();
+    if (session) session.endSession();
   }
 };
 
 // Update existing admission (Update Guardian & specific Student)
 const updateAdmission = async (req, res) => {
-    const { db, client } = await mongoConnect();
-    const session = client.startSession();
-    
+    let session = null;
     try {
+        const { db, client } = await mongoConnect();
+        session = client.startSession();
         session.startTransaction();
         const payload = req.body;
         const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
@@ -253,17 +253,17 @@ const updateAdmission = async (req, res) => {
         await session.commitTransaction();
         res.status(200).json({ success: true, message: "Admission updated successfully" });
     } catch (error) {
-        if (session.inTransaction()) await session.abortTransaction();
+        if (session && session.inTransaction()) await session.abortTransaction();
         res.status(500).json({ success: false, message: error.message });
     } finally {
-        session.endSession();
+        if (session) session.endSession();
     }
 };
 
 // Get all admissions (Students with Guardian info)
 const getAdmissions = async (req, res) => {
-    const { db, client } = await mongoConnect();
     try {
+        const { db, client } = await mongoConnect();
         const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
         const query = { madrasa_id: madrasaId };
 
@@ -297,7 +297,14 @@ const getAdmissions = async (req, res) => {
             { $unwind: { path: "$guardian", preserveNullAndEmptyArrays: true } },
             {
                 $addFields: {
-                    classObjectId: { $cond: [{ $and: [{ $ne: ["$class_id", null] }, { $ne: ["$class_id", ""] }] }, { $toObjectId: "$class_id" }, null] }
+                    classObjectId: { 
+                        $convert: { 
+                            input: "$class_id", 
+                            to: "objectId", 
+                            onError: null, 
+                            onNull: null 
+                        } 
+                    }
                 }
             },
             {
@@ -325,8 +332,8 @@ const getAdmissions = async (req, res) => {
 
 // Delete Admission (Delete Student, check if guardian should remain)
 const deleteAdmission = async (req, res) => {
-    const { db, client } = await mongoConnect();
     try {
+        const { db, client } = await mongoConnect();
         const studentId = new ObjectId(req.params.id);
         const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
 
@@ -348,9 +355,89 @@ const deleteAdmission = async (req, res) => {
     }
 };
 
+// Online Admission Admin Endpoints (Multi-tenant)
+const getOnlineAdmissions = async (req, res) => {
+    try {
+        const { db } = await mongoConnect();
+        const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const [data, total] = await Promise.all([
+            db.collection("online_admissions").find({ madrasa_id: madrasaId })
+                .sort({ created_at: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .toArray(),
+            db.collection("online_admissions").countDocuments({ madrasa_id: madrasaId })
+        ]);
+
+        res.status(200).json({ success: true, data, total });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getOnlineAdmissionById = async (req, res) => {
+    try {
+        const { db } = await mongoConnect();
+        const { id } = req.params;
+        const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+        const data = await db.collection("online_admissions").findOne({ _id: new ObjectId(id), madrasa_id: madrasaId });
+        if (!data) return res.status(404).json({ success: false, message: "Application not found" });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const updateOnlineAdmissionStatus = async (req, res) => {
+    let session = null;
+    try {
+        const { db, client } = await mongoConnect();
+        session = client.startSession();
+        const { id } = req.params;
+        const { status } = req.body;
+        const madrasaId = req.user.madrasa_id ? new ObjectId(req.user.madrasa_id) : null;
+        
+        session.startTransaction();
+
+        // 1. Update status in online_admissions
+        const updateResult = await db.collection("online_admissions").findOneAndUpdate(
+            { _id: new ObjectId(id), madrasa_id: madrasaId },
+            { $set: { status, updated_at: new Date() } },
+            { session, returnDocument: "after" }
+        );
+
+        const application = updateResult.value || updateResult; // Handle different mongo driver versions
+
+        if (!application) {
+            await session.abortTransaction();
+            return res.status(404).json({ success: false, message: "Application not found" });
+        }
+
+        // 2. Status updated successfully. The student/parent creation is now handled
+        // manually via the official admission form (auto-filled) to allow for
+        // principal review and completion of remaining fields.
+
+        await session.commitTransaction();
+        res.status(200).json({ success: true, message: `Application ${status} and processed` });
+    } catch (error) {
+        if (session && session.inTransaction()) await session.abortTransaction();
+        console.error("Update Status Error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    } finally {
+        if (session) session.endSession();
+    }
+};
+
 // Routes
 router.use(authMiddleware);
 router.use(tenantMiddleware);
+
+router.get("/online-admission", rbacMiddleware(['admin']), getOnlineAdmissions);
+router.get("/online-admission/:id", rbacMiddleware(['admin']), getOnlineAdmissionById);
+router.put("/online-admission/:id/status", rbacMiddleware(['admin']), updateOnlineAdmissionStatus);
 
 router.get("/admission", rbacMiddleware(['admin']), getAdmissions);
 router.post("/admission", rbacMiddleware(['admin']), validate(admissionSchema), createAdmission);

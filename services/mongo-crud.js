@@ -23,7 +23,7 @@ module.exports = {
   ) {
     // Note limit = 0 is the equivalent of setting no limit
     try {
-      const keys = { ...key, _id: 0 }
+      const keys = { ...key }
       const list = await db.collection(collection)
         .find(query)
         .skip(pageNumber > 0 ? (pageNumber - 1) * limit : 0)
@@ -40,7 +40,7 @@ module.exports = {
 
   async fetchOne(db, collection, query = {}, key = {}, sorting = {}) {
     try {
-      const keys = { ...key, _id: 0 }
+      const keys = { ...key }
       const list = await db.collection(collection)
         .find(query)
         .sort(sorting)
@@ -57,7 +57,7 @@ module.exports = {
     limit = 10,
     pageNumber = 0) {
     try {
-      const keys = { ...key, _id: 0 }
+      const keys = { ...key }
       const list = await db.collection(collection)
         .aggregate(query)
         .skip(pageNumber > 0 ? (pageNumber - 1) * limit : 0)
