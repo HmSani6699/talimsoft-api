@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 const Joi = require("joi");
 const validate = require(`${root}/middleware/validate`);
 
@@ -80,9 +81,59 @@ const createHomework = async (req, res) => {
   }
 };
 
+// Update homework
+const updateHomework = async (req, res) => {
+  const { db, client } = await mongoConnect();
+  try {
+    const result = await mongo.updateData(
+      db,
+      "homework",
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
+      {
+        $set: {
+          ...req.body,
+          updated_at: Date.now()
+        }
+      }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: "Homework not found" });
+    }
+    
+    res.status(200).json({ success: true, message: "Homework updated successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    // await // client.close();
+  }
+};
+
+// Delete homework
+const deleteHomework = async (req, res) => {
+  const { db, client } = await mongoConnect();
+  try {
+    const result = await mongo.deleteData(db, "homework", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: "Homework not found" });
+    }
+    
+    res.status(200).json({ success: true, message: "Homework deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    // await // client.close();
+  }
+};
+
 // Routes
 router.get("/homework", getAllHomework);
 router.get("/homework/:id", getHomeworkById);
 router.post("/homework", validate(homeworkSchema), createHomework);
+router.put("/homework/:id", validate(homeworkSchema), updateHomework);
+router.delete("/homework/:id", deleteHomework);
 
 module.exports = router;
