@@ -65,11 +65,11 @@ const updateGrade = async (req, res) => {
   try {
     const { min_marks, max_marks, name } = req.body;
     const id = req.params.id;
+    const { ObjectId } = require("mongodb");
 
     // Check overlap excluding self
     // Complex query: find overlap where _id != currentId
     // Since mongo-crud doesn't support $ne in simple fetchOne easily without raw query, we use raw db
-    const { ObjectId } = require("mongodb");
     
     if (min_marks !== undefined && max_marks !== undefined) {
         const overlap = await db.collection("grades").findOne({
@@ -91,7 +91,7 @@ const updateGrade = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "grades",
-      { _id: id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -133,8 +133,9 @@ const getAllGrades = async (req, res) => {
   // Get single grade by ID
   const getGradeById = async (req, res) => {
     const { db, client } = await mongoConnect();
+    const { ObjectId } = require("mongodb");
     try {
-      const grade = await mongo.fetchOne(db, "grades", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+      const grade = await mongo.fetchOne(db, "grades", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
       if (!grade) {
         return res.status(404).json({ success: false, message: "Grade not found" });
       }
@@ -176,8 +177,9 @@ const getAllGrades = async (req, res) => {
   // Delete grade
   const deleteGrade = async (req, res) => {
     const { db, client } = await mongoConnect();
+    const { ObjectId } = require("mongodb");
     try {
-      const result = await mongo.deleteData(db, "grades", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+      const result = await mongo.deleteData(db, "grades", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
       
       if (!result) {
         return res.status(404).json({ success: false, message: "Grade not found" });
