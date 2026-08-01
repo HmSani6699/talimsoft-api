@@ -128,7 +128,7 @@ module.exports = {
     try {
       let result = await db.collection(collection)
         .updateOne(query, newValue);
-      return !!result.modifiedCount; // for returning boolean value of if updated or not
+      return result.matchedCount > 0; // return true if document exists, even if not modified
     } catch (e) {
       console.error(e);
       return false;

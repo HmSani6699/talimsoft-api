@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const root = require("app-root-path");
+const { ObjectId } = require("mongodb");
 
 const mongo = require(`${root}/services/mongo-crud`);
 const mongoConnect = require(`${root}/services/mongo-connect`);
@@ -24,7 +25,7 @@ const getAllExamNames = async (req, res) => {
 const getExamNameById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const examName = await mongo.fetchOne(db, "exam_names", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const examName = await mongo.fetchOne(db, "exam_names", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     if (!examName) {
       return res.status(404).json({ success: false, message: "Exam name not found" });
     }
@@ -65,7 +66,7 @@ const updateExamName = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "exam_names",
-      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -91,7 +92,7 @@ const updateExamName = async (req, res) => {
 const deleteExamName = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "exam_names", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const result = await mongo.deleteData(db, "exam_names", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Exam name not found" });

@@ -5,6 +5,7 @@ const validate = require(`${root}/middleware/validate`);
 
 const mongo = require(`${root}/services/mongo-crud`);
 const mongoConnect = require(`${root}/services/mongo-connect`);
+const { ObjectId } = require("mongodb");
 
 // Joi Schema
 const scheduleSchema = Joi.object({
@@ -28,7 +29,7 @@ const getAllSchedules = async (req, res) => {
     if (req.query.class_id) query.class_id = req.query.class_id;
     if (req.query.subject_id) query.subject_id = req.query.subject_id;
     
-    const schedules = await mongo.fetchMany(db, "exam_schedules", query, {}, { exam_date: 1, start_time: 1 });
+    const schedules = await mongo.fetchMany(db, "exam_schedules", query);
     const total = await mongo.documentCount(db, "exam_schedules", query);
     res.status(200).json({ success: true, data: schedules, total });
   } catch (error) {
@@ -43,7 +44,7 @@ const getAllSchedules = async (req, res) => {
 const getScheduleById = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const schedule = await mongo.fetchOne(db, "exam_schedules", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const schedule = await mongo.fetchOne(db, "exam_schedules", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     if (!schedule) {
       return res.status(404).json({ success: false, message: "Schedule not found" });
     }
@@ -95,7 +96,7 @@ const updateSchedule = async (req, res) => {
     const result = await mongo.updateData(
       db,
       "exam_schedules",
-      { _id: req.params.id, madrasa_id: req.user.madrasa_id },
+      { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id },
       {
         $set: {
           ...req.body,
@@ -121,7 +122,7 @@ const updateSchedule = async (req, res) => {
 const deleteSchedule = async (req, res) => {
   const { db, client } = await mongoConnect();
   try {
-    const result = await mongo.deleteData(db, "exam_schedules", { _id: req.params.id, madrasa_id: req.user.madrasa_id });
+    const result = await mongo.deleteData(db, "exam_schedules", { _id: new ObjectId(req.params.id), madrasa_id: req.user.madrasa_id });
     
     if (!result) {
       return res.status(404).json({ success: false, message: "Schedule not found" });
